@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Treino de Matrizes de Raven</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f4f8;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            color: #333;
+        }
+
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 90%;
+            width: 600px;
+        }
+
+        h1 { color: #2c3e50; font-size: 1.5rem; margin-bottom: 10px; }
+
+        #progress { margin-bottom: 15px; font-weight: bold; color: #7f8c8d; }
+
+        .matrix-img {
+            max-width: 100%;
+            height: auto;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .btn-option {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 20px;
+            font-size: 1.5rem;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.1s, background-color 0.2s;
+        }
+
+        .btn-option:hover { background-color: #2980b9; }
+        .btn-option:active { transform: scale(0.95); }
+
+        /* Cores de feedback */
+        .correct { background-color: #2ecc71 !important; }
+        .wrong { background-color: #e74c3c !important; animation: shake 0.3s; }
+
+        @keyframes shake {
+            0% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            75% { transform: translateX(-5px); }
+            100% { transform: translateX(0); }
+        }
+
+        #message {
+            margin-top: 15px;
+            height: 24px;
+            font-weight: bold;
+        }
+
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container" id="game-container">
+    <h1 id="title">Matrizes de Raven</h1>
+    <div id="progress">Questão 1 de 36</div>
+    
+    <img id="main-image" src="" alt="Matriz Raven" class="matrix-img">
+
+    <div id="message"></div>
+
+    <div class="options-grid">
+        <button class="btn-option" onclick="checkAnswer(1)">1</button>
+        <button class="btn-option" onclick="checkAnswer(2)">2</button>
+        <button class="btn-option" onclick="checkAnswer(3)">3</button>
+        <button class="btn-option" onclick="checkAnswer(4)">4</button>
+        <button class="btn-option" onclick="checkAnswer(5)">5</button>
+        <button class="btn-option" onclick="checkAnswer(6)">6</button>
+    </div>
+</div>
+
+<div class="container hidden" id="finish-screen">
+    <h1>Parabéns!</h1>
+    <p>Você completou todos os exercícios.</p>
+    <button class="btn-option" onclick="location.reload()">Recomeçar</button>
+</div>
+
+<script>
+    let currentQuestion = 1;
+    let answers = {};
+    const totalQuestions = 36;
+
+    // Carregar o arquivo de respostas
+    async function loadAnswers() {
+        try {
+            const response = await fetch('respostas.txt');
+            const text = await response.text();
+            
+            // Converte o texto em um objeto JS { questao: resposta }
+            const lines = text.trim().split('\n');
+            lines.forEach(line => {
+                const parts = line.split(';');
+                if (parts.length >= 2) {
+                    const qNum = parts[0].trim();
+                    const qAns = parts[1].trim();
+                    answers[qNum] = qAns;
+                }
+            });
+            updateQuestion();
+        } catch (error) {
+            console.error("Erro ao carregar respostas:", error);
+            document.getElementById('message').innerText = "Erro ao carregar dados.";
+        }
+    }
+
+    function updateQuestion() {
+        if (currentQuestion > totalQuestions) {
+            document.getElementById('game-container').classList.add('hidden');
+            document.getElementById('finish-screen').classList.remove('hidden');
+            return;
+        }
+
+        document.getElementById('progress').innerText = `Questão ${currentQuestion} de ${totalQuestions}`;
+        // Assume que as imagens estão na pasta pngs e chamam-se 1.png, 2.png, etc.
+        document.getElementById('main-image').src = `pngs/${currentQuestion}.png`;
+        document.getElementById('message').innerText = "";
+        
+        // Resetar cores dos botões
+        const buttons = document.querySelectorAll('.btn-option');
+        buttons.forEach(btn => btn.className = 'btn-option');
+    }
+
+    function checkAnswer(choice) {
+        const correctAnswer = answers[currentQuestion];
+        const buttons = document.querySelectorAll('.btn-option');
+        const selectedBtn = buttons[choice - 1];
+
+        if (choice.toString() === correctAnswer) {
+            selectedBtn.classList.add('correct');
+            document.getElementById('message').style.color = "#2ecc71";
+            document.getElementById('message').innerText = "Correto! Muito bem!";
+            
+            // Espera 1 segundo para a criança ver que acertou e pula para a próxima
+            setTimeout(() => {
+                currentQuestion++;
+                updateQuestion();
+            }, 1000);
+        } else {
+            selectedBtn.classList.add('wrong');
+            document.getElementById('message').style.color = "#e74c3c";
+            document.getElementById('message').innerText = "Tente novamente!";
+            
+            // Remove a cor vermelha após a animação para permitir nova tentativa
+            setTimeout(() => {
+                selectedBtn.classList.remove('wrong');
+            }, 500);
+        }
+    }
+
+    // Iniciar
+    loadAnswers();
+</script>
+
+</body>
+</html>
