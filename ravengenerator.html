@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerador de Matrizes Lógicas - Raven Style</title>
+    <style>
+        :root {
+            --bg-color: #f0f2f5;
+            --card-bg: #ffffff;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --text: #1e293b;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 600px;
+            width: 90%;
+        }
+
+        h1 { margin-top: 0; font-size: 1.5rem; }
+
+        .status-badge {
+            background: #e2e8f0;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 1rem;
+            color: var(--primary);
+        }
+
+        canvas {
+            border: 2px solid #334155;
+            background: white;
+            max-width: 100%;
+            height: auto;
+            margin: 1rem 0;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 1rem;
+        }
+
+        button {
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .btn-next { background-color: var(--primary); color: white; }
+        .btn-next:hover { background-color: var(--primary-hover); }
+
+        .btn-save { background-color: #10b981; color: white; }
+        .btn-save:hover { background-color: #059669; }
+
+        .info {
+            margin-top: 1rem;
+            font-size: 0.85rem;
+            color: #64748b;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Gerador de Matrizes Lógicas</h1>
+    <div id="idDisplay" class="status-badge">Gerando: A1</div>
+    
+    <div>
+        <canvas id="matrixCanvas"></canvas>
+    </div>
+
+    <div class="controls">
+        <button class="btn-next" onclick="nextChallenge()">Próximo Desafio</button>
+        <button class="btn-save" onclick="saveImage()">Salvar .PNG</button>
+    </div>
+
+    <div class="info">
+        Padrão: 2x2 ou 3x3 | O último quadrante é o desafio.
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('matrixCanvas');
+    const ctx = canvas.getContext('2d');
+    const idDisplay = document.getElementById('idDisplay');
+
+    let currentLetter = 'A';
+    let currentNumber = 1;
+    const canvasSize = 600; // Tamanho base
+
+    // Configuração de DPI para nitidez
+    function setupCanvas() {
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = canvasSize * dpr;
+        canvas.height = canvasSize * dpr;
+        canvas.style.width = canvasSize + "px";
+        canvas.style.height = canvasSize + "px";
+        ctx.scale(dpr, dpr);
+    }
+
+    // Função Principal de Desenho
+    function drawMatrix() {
+        const id = `${currentLetter}${currentNumber}`;
+        idDisplay.innerText = `Gerando: ${id}`;
+        
+        ctx.clearRect(0, 0, canvasSize, canvasSize);
+        
+        // Define dificuldade e grid baseada na letra
+        let gridSize = (currentLetter === 'A' || currentLetter === 'B') ? 2 : 3;
+        const cellSize = canvasSize / gridSize;
+
+        for (let row = 0; row < gridSize; row++) {
+            for (let col = 0; col < gridSize; col++) {
+                const x = col * cellSize;
+                const y = row * cellSize;
+
+                // Desenha borda da célula
+                ctx.strokeStyle = '#e2e8f0';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(x, y, cellSize, cellSize);
+
+                // Se for a última célula, desenha o ponto de interrogação
+                if (row === gridSize - 1 && col === gridSize - 1) {
+                    drawPlaceholder(x, y, cellSize);
+                } else {
+                    renderLogic(x, y, cellSize, row, col, gridSize);
+                }
+            }
+        }
+    }
+
+    // Lógica de Renderização por Nível
+    function renderLogic(x, y, size, row, col, gridSize) {
+        ctx.save();
+        ctx.translate(x + size/2, y + size/2);
+        ctx.strokeStyle = '#000';
+        ctx.fillStyle = '#000';
+        ctx.lineWidth = 3;
+
+        const progress = (row * gridSize + col); // 0, 1, 2...
+
+        switch (currentLetter) {
+            case 'A': // Lógica de repetição e escala simples
+                const radius = (size * 0.2) + (currentNumber * 2);
+                drawShape('circle', 0, 0, radius);
+                break;
+
+            case 'B': // Lógica de preenchimento ou formas duplas
+                drawShape('rect', 0, 0, size * 0.4);
+                if (col > 0 || row > 0) ctx.fill();
+                break;
+
+            case 'C': // Lógica de Rotação
+                const angle = (progress * 45) * Math.PI / 180;
+                ctx.rotate(angle);
+                drawShape('triangle', 0, 0, size * 0.3);
+                break;
+
+            case 'D': // Progressão de Elementos (Quantidade)
+                const count = progress + 1;
+                for(let i=0; i<count; i++) {
+                    drawShape('circle', (i*15) - (count*7), 0, 10);
+                }
+                break;
+
+            default: // Lógica Genérica para Z e níveis altos (Complexidade Procedural)
+                ctx.rotate((progress * 30) * Math.PI / 180);
+                drawShape('polygon', 0, 0, size * 0.3, 5 + (currentNumber % 3));
+                if (currentNumber % 2 === 0) ctx.stroke(); else ctx.fill();
+                break;
+        }
+
+        ctx.restore();
+    }
+
+    // Helpers de Desenho
+    function drawShape(type, x, y, size, sides = 5) {
+        ctx.beginPath();
+        if (type === 'circle') {
+            ctx.arc(x, y, size, 0, Math.PI * 2);
+        } else if (type === 'rect') {
+            ctx.rect(x - size/2, y - size/2, size, size);
+        } else if (type === 'triangle') {
+            ctx.moveTo(x, y - size);
+            ctx.lineTo(x + size, y + size);
+            ctx.lineTo(x - size, y + size);
+            ctx.closePath();
+        } else if (type === 'polygon') {
+            for (let i = 0; i < sides; i++) {
+                ctx.lineTo(x + size * Math.cos(i * 2 * Math.PI / sides),
+                           y + size * Math.sin(i * 2 * Math.PI / sides));
+            }
+            ctx.closePath();
+        }
+        ctx.stroke();
+    }
+
+    function drawPlaceholder(x, y, size) {
+        ctx.fillStyle = "#f8fafc";
+        ctx.fillRect(x + 5, y + 5, size - 10, size - 10);
+        ctx.fillStyle = "#cbd5e1";
+        ctx.font = `bold ${size/3}px Arial`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("?", x + size/2, y + size/2);
+    }
+
+    // Navegação e Exportação
+    function nextChallenge() {
+        currentNumber++;
+        if (currentNumber > 12) {
+            currentNumber = 1;
+            currentLetter = String.fromCharCode(currentLetter.charCodeAt(0) + 1);
+        }
+        if (currentLetter > 'Z') currentLetter = 'A'; // Reset após Z
+        drawMatrix();
+    }
+
+    function saveImage() {
+        const link = document.createElement('a');
+        const id = `${currentLetter}${currentNumber}`;
+        link.download = `Raven_${id}.png`;
+        link.href = canvas.toDataURL('image/png', 1.0);
+        link.click();
+    }
+
+    // Inicialização
+    setupCanvas();
+    drawMatrix();
+
+</script>
+</body>
+</html>
