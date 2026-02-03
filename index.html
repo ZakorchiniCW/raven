@@ -3,39 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Treino de Matrizes de Raven</title>
+    <title>Treino de Matrizes v2</title>
     <style>
+        :root {
+            --primary: #3498db;
+            --success: #2ecc71;
+            --danger: #e74c3c;
+            --dark: #2c3e50;
+        }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Segoe UI', sans-serif;
             background-color: #f0f4f8;
             display: flex;
-            flex-direction: column;
-            align-items: center;
             justify-content: center;
+            align-items: center;
             min-height: 100vh;
             margin: 0;
-            color: #333;
         }
 
         .container {
             background: white;
-            padding: 20px;
-            border-radius: 15px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
             text-align: center;
-            max-width: 90%;
-            width: 600px;
+            width: 90%;
+            max-width: 600px;
         }
 
-        h1 { color: #2c3e50; font-size: 1.5rem; margin-bottom: 10px; }
+        /* Painel de Status */
+        .status-bar {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            font-weight: bold;
+        }
 
-        #progress { margin-bottom: 15px; font-weight: bold; color: #7f8c8d; }
+        .status-item { font-size: 0.9rem; color: var(--dark); }
+        .val { color: var(--primary); font-size: 1.1rem; }
 
         .matrix-img {
             max-width: 100%;
             height: auto;
-            border: 2px solid #ddd;
-            border-radius: 8px;
+            border: 3px solid #eee;
+            border-radius: 12px;
             margin-bottom: 20px;
         }
 
@@ -43,144 +58,195 @@
             display: grid;
             grid-template-columns: repeat(3, 1fr);
             gap: 15px;
-            margin-top: 10px;
         }
 
-        .btn-option {
-            background-color: #3498db;
+        .btn {
+            background-color: var(--primary);
             color: white;
             border: none;
             padding: 20px;
             font-size: 1.5rem;
-            border-radius: 10px;
+            border-radius: 12px;
             cursor: pointer;
-            transition: transform 0.1s, background-color 0.2s;
+            transition: 0.2s;
         }
 
-        .btn-option:hover { background-color: #2980b9; }
-        .btn-option:active { transform: scale(0.95); }
+        .btn:hover { filter: brightness(1.1); }
+        .btn:active { transform: scale(0.95); }
 
-        /* Cores de feedback */
-        .correct { background-color: #2ecc71 !important; }
-        .wrong { background-color: #e74c3c !important; animation: shake 0.3s; }
+        .correct { background-color: var(--success) !important; }
+        .wrong { background-color: var(--danger) !important; animation: shake 0.3s; }
 
         @keyframes shake {
-            0% { transform: translateX(0); }
+            0%, 100% { transform: translateX(0); }
             25% { transform: translateX(-5px); }
-            50% { transform: translateX(5px); }
-            75% { transform: translateX(-5px); }
-            100% { transform: translateX(0); }
-        }
-
-        #message {
-            margin-top: 15px;
-            height: 24px;
-            font-weight: bold;
+            75% { transform: translateX(5px); }
         }
 
         .hidden { display: none; }
+
+        #start-screen img { width: 100px; margin-bottom: 20px; }
+        
+        .summary-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+            text-align: left;
+        }
+
+        .share-btn {
+            background-color: #27ae60;
+            margin-top: 10px;
+            width: 100%;
+        }
+
+        #message { height: 25px; margin-top: 10px; font-weight: bold; }
     </style>
 </head>
 <body>
 
-<div class="container" id="game-container">
-    <h1 id="title">Matrizes de Raven</h1>
-    <div id="progress">Questão 1 de 36</div>
-    
-    <img id="main-image" src="" alt="Matriz Raven" class="matrix-img">
-
-    <div id="message"></div>
-
-    <div class="options-grid">
-        <button class="btn-option" onclick="checkAnswer(1)">1</button>
-        <button class="btn-option" onclick="checkAnswer(2)">2</button>
-        <button class="btn-option" onclick="checkAnswer(3)">3</button>
-        <button class="btn-option" onclick="checkAnswer(4)">4</button>
-        <button class="btn-option" onclick="checkAnswer(5)">5</button>
-        <button class="btn-option" onclick="checkAnswer(6)">6</button>
-    </div>
+<!-- TELA INICIAL -->
+<div id="start-screen" class="container">
+    <h1>Treino de Matrizes</h1>
+    <p>Desafie sua percepção visual!</p>
+    <p>Responda as 36 questões o mais rápido que puder.</p>
+    <button class="btn" style="width: 100%;" onclick="startGame()">INICIAR TREINO</button>
 </div>
 
-<div class="container hidden" id="finish-screen">
-    <h1>Parabéns!</h1>
-    <p>Você completou todos os exercícios.</p>
-    <button class="btn-option" onclick="location.reload()">Recomeçar</button>
+<!-- TELA DO JOGO -->
+<div id="game-screen" class="container hidden">
+    <div class="status-bar">
+        <div class="status-item">Acertos: <span id="hits-count" class="val">0</span></div>
+        <div class="status-item">Erros: <span id="misses-count" class="val">0</span></div>
+        <div class="status-item">Tempo: <span id="timer" class="val">00:00</span></div>
+    </div>
+
+    <div id="progress">Questão 1 de 36</div>
+    <img id="main-image" src="" alt="Questão" class="matrix-img">
+
+    <div class="options-grid">
+        <button class="btn btn-opt" onclick="check(1)">1</button>
+        <button class="btn btn-opt" onclick="check(2)">2</button>
+        <button class="btn btn-opt" onclick="check(3)">3</button>
+        <button class="btn btn-opt" onclick="check(4)">4</button>
+        <button class="btn btn-opt" onclick="check(5)">5</button>
+        <button class="btn btn-opt" onclick="check(6)">6</button>
+    </div>
+    <div id="message"></div>
+</div>
+
+<!-- TELA FINAL -->
+<div id="finish-screen" class="container hidden">
+    <h1>🎉 Concluído!</h1>
+    <div class="summary-card">
+        <p>⏱ <b>Tempo Total:</b> <span id="final-time"></span></p>
+        <p>✅ <b>Acertos:</b> <span id="final-hits"></span></p>
+        <p>❌ <b>Erros:</b> <span id="final-misses"></span></p>
+        <p>🎯 <b>Precisão:</b> <span id="final-accuracy"></span>%</p>
+    </div>
+    <button class="btn share-btn" onclick="shareResult()">Partilhar Resultado 🔗</button>
+    <button class="btn" style="width: 100%; margin-top: 10px; background: #95a5a6;" onclick="location.reload()">Refazer</button>
 </div>
 
 <script>
-    let currentQuestion = 1;
+    let currentQ = 1;
+    let hits = 0;
+    let misses = 0;
+    let startTime;
+    let timerInterval;
     let answers = {};
-    const totalQuestions = 36;
+    const totalQ = 36;
 
-    // Carregar o arquivo de respostas
-    async function loadAnswers() {
+    // Carregar respostas do arquivo TXT
+    async function loadData() {
         try {
-            const response = await fetch('respostas.txt');
-            const text = await response.text();
-            
-            // Converte o texto em um objeto JS { questao: resposta }
-            const lines = text.trim().split('\n');
-            lines.forEach(line => {
-                const parts = line.split(';');
-                if (parts.length >= 2) {
-                    const qNum = parts[0].trim();
-                    const qAns = parts[1].trim();
-                    answers[qNum] = qAns;
-                }
+            const resp = await fetch('respostas.txt');
+            const text = await resp.text();
+            text.trim().split('\n').forEach(line => {
+                const p = line.split(';');
+                if(p.length >= 2) answers[p[0].trim()] = p[1].trim();
             });
-            updateQuestion();
-        } catch (error) {
-            console.error("Erro ao carregar respostas:", error);
-            document.getElementById('message').innerText = "Erro ao carregar dados.";
-        }
+        } catch (e) { alert("Erro ao carregar arquivo de respostas."); }
     }
 
-    function updateQuestion() {
-        if (currentQuestion > totalQuestions) {
-            document.getElementById('game-container').classList.add('hidden');
-            document.getElementById('finish-screen').classList.remove('hidden');
-            return;
-        }
+    function startGame() {
+        document.getElementById('start-screen').classList.add('hidden');
+        document.getElementById('game-screen').classList.remove('hidden');
+        startTime = Date.now();
+        timerInterval = setInterval(updateTimer, 1000);
+        updateUI();
+    }
 
-        document.getElementById('progress').innerText = `Questão ${currentQuestion} de ${totalQuestions}`;
-        // Assume que as imagens estão na pasta pngs e chamam-se 1.png, 2.png, etc.
-        document.getElementById('main-image').src = `pngs/${currentQuestion}.png`;
+    function updateTimer() {
+        const diff = Math.floor((Date.now() - startTime) / 1000);
+        const m = Math.floor(diff / 60).toString().padStart(2, '0');
+        const s = (diff % 60).toString().padStart(2, '0');
+        document.getElementById('timer').innerText = `${m}:${s}`;
+    }
+
+    function updateUI() {
+        if (currentQ > totalQ) return finish();
+        document.getElementById('progress').innerText = `Questão ${currentQ} de ${totalQ}`;
+        document.getElementById('main-image').src = `pngs/${currentQ}.png`;
         document.getElementById('message').innerText = "";
-        
-        // Resetar cores dos botões
-        const buttons = document.querySelectorAll('.btn-option');
-        buttons.forEach(btn => btn.className = 'btn-option');
+        document.querySelectorAll('.btn-opt').forEach(b => b.className = 'btn btn-opt');
     }
 
-    function checkAnswer(choice) {
-        const correctAnswer = answers[currentQuestion];
-        const buttons = document.querySelectorAll('.btn-option');
-        const selectedBtn = buttons[choice - 1];
+    function check(choice) {
+        const correct = answers[currentQ];
+        const btns = document.querySelectorAll('.btn-opt');
+        const btn = btns[choice - 1];
 
-        if (choice.toString() === correctAnswer) {
-            selectedBtn.classList.add('correct');
-            document.getElementById('message').style.color = "#2ecc71";
-            document.getElementById('message').innerText = "Correto! Muito bem!";
+        if (choice.toString() === correct) {
+            hits++;
+            document.getElementById('hits-count').innerText = hits;
+            btn.classList.add('correct');
+            document.getElementById('message').innerText = "Muito bem! ✨";
+            document.getElementById('message').style.color = "var(--success)";
             
-            // Espera 1 segundo para a criança ver que acertou e pula para a próxima
             setTimeout(() => {
-                currentQuestion++;
-                updateQuestion();
-            }, 1000);
+                currentQ++;
+                updateUI();
+            }, 800);
         } else {
-            selectedBtn.classList.add('wrong');
-            document.getElementById('message').style.color = "#e74c3c";
-            document.getElementById('message').innerText = "Tente novamente!";
-            
-            // Remove a cor vermelha após a animação para permitir nova tentativa
-            setTimeout(() => {
-                selectedBtn.classList.remove('wrong');
-            }, 500);
+            misses++;
+            document.getElementById('misses-count').innerText = misses;
+            btn.classList.add('wrong');
+            document.getElementById('message').innerText = "Tente de novo! 🧐";
+            document.getElementById('message').style.color = "var(--danger)";
+            setTimeout(() => btn.classList.remove('wrong'), 500);
         }
     }
 
-    // Iniciar
-    loadAnswers();
+    function finish() {
+        clearInterval(timerInterval);
+        document.getElementById('game-screen').classList.add('hidden');
+        document.getElementById('finish-screen').classList.remove('hidden');
+
+        const timeStr = document.getElementById('timer').innerText;
+        const accuracy = Math.round((hits / (hits + misses)) * 100) || 0;
+
+        document.getElementById('final-time').innerText = timeStr;
+        document.getElementById('final-hits').innerText = hits;
+        document.getElementById('final-misses').innerText = misses;
+        document.getElementById('final-accuracy').innerText = accuracy;
+    }
+
+    function shareResult() {
+        const time = document.getElementById('final-time').innerText;
+        const acc = document.getElementById('final-accuracy').innerText;
+        const text = `Completei o treino de Matrizes de Raven em ${time} com ${acc}% de precisão! Tente você também: ${window.location.href}`;
+
+        if (navigator.share) {
+            navigator.share({ title: 'Meu Desempenho', text: text, url: window.location.href });
+        } else {
+            navigator.clipboard.writeText(text);
+            alert("Resultado copiado para a área de transferência!");
+        }
+    }
+
+    loadData();
 </script>
 
 </body>
