@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerador de Matrizes + Exportador de Metadados</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #ffffff;
+            --primary: #3b82f6;
+            --success: #10b981;
+            --accent: #f59e0b;
+            --text-light: #f8fafc;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-light);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            margin: 0;
+        }
+
+        .container { text-align: center; max-width: 800px; }
+
+        .header-ui {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 600px;
+            margin-bottom: 15px;
+        }
+
+        .status-badge {
+            background: var(--primary);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: bold;
+        }
+
+        canvas {
+            background: white;
+            border-radius: 4px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 20px;
+            width: 600px;
+        }
+
+        button {
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+        }
+
+        .btn-next { background: var(--primary); color: white; grid-column: span 2; }
+        .btn-save-img { background: var(--success); color: white; }
+        .btn-save-json { background: var(--accent); color: white; }
+        
+        button:hover { opacity: 0.9; transform: translateY(-1px); }
+        button:active { transform: translateY(0); }
+
+        .log-panel {
+            margin-top: 20px;
+            background: #1e293b;
+            padding: 10px;
+            border-radius: 6px;
+            width: 600px;
+            max-height: 150px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 0.75rem;
+            text-align: left;
+            color: #94a3b8;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header-ui">
+        <div id="idDisplay" class="status-badge">ID: A1</div>
+        <div id="correctLabel" style="color: #10b981; font-weight: bold;">CORRETA: ?</div>
+    </div>
+    
+    <canvas id="mainCanvas"></canvas>
+
+    <div class="controls">
+        <button class="btn-next" onclick="generateNew()">Gerar Novo Desafio</button>
+        <button class="btn-save-img" onclick="saveImage()">Salvar PNG</button>
+        <button class="btn-save-json" onclick="downloadJSON()">Baixar Metadados (.JSON)</button>
+    </div>
+
+    <div class="log-panel" id="logPanel">
+        Sessão iniciada. Assets salvos aparecerão aqui...
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('mainCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    const W = 600; 
+    const H = 850; 
+    const matrixAreaSize = 600;
+    
+    let currentID = { letter: 'A', num: 1 };
+    let lastGeneratedData = null;
+    let sessionMetadata = []; // Armazena o histórico para o JSON
+
+    function setupCanvas() {
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = W * dpr;
+        canvas.height = H * dpr;
+        canvas.style.width = W + "px";
+        canvas.style.height = H + "px";
+        ctx.scale(dpr, dpr);
+    }
+
+    function drawElement(x, y, size, state) {
+        ctx.save();
+        ctx.translate(x + size/2, y + size/2);
+        ctx.rotate(state.rot * Math.PI / 180);
+        ctx.strokeStyle = '#000';
+        ctx.fillStyle = state.filled ? '#000' : 'transparent';
+        ctx.lineWidth = 4;
+        const s = size * state.scale;
+
+        ctx.beginPath();
+        if (state.shape === 'circle') ctx.arc(0, 0, s/2.5, 0, Math.PI * 2);
+        else if (state.shape === 'rect') ctx.rect(-s/2.5, -s/2.5, s/1.25, s/1.25);
+        else if (state.shape === 'poly') {
+            for(let i=0; i<state.sides; i++) {
+                ctx.lineTo(s/2 * Math.cos(i * 2 * Math.PI / state.sides), 
+                           s/2 * Math.sin(i * 2 * Math.PI / state.sides));
+            }
+            ctx.closePath();
+        }
+        if (state.filled) ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    function generateNew() {
+        ctx.fillStyle = "white";
+        ctx.fillRect(0, 0, W, H);
+        
+        const grid = (currentID.letter === 'A' || currentID.letter === 'B') ? 2 : 3;
+        const cellSize = matrixAreaSize / grid;
+        let correctState = null;
+
+        // 1. Renderizar Matriz Principal
+        for (let r = 0; r < grid; r++) {
+            for (let c = 0; c < grid; c++) {
+                let state = {
+                    shape: currentID.letter === 'A' ? 'circle' : (currentID.letter === 'B' ? 'rect' : 'poly'),
+                    rot: (r + c) * (currentID.num * 15),
+                    scale: 0.4 + (c * 0.15),
+                    filled: (r > 0),
+                    sides: 3 + r + c
+                };
+                const x = c * cellSize;
+                const y = r * cellSize;
+                ctx.strokeStyle = "#eee";
+                ctx.strokeRect(x, y, cellSize, cellSize);
+
+                if (!(r === grid - 1 && c === grid - 1)) {
+                    drawElement(x, y, cellSize, state);
+                } else {
+                    correctState = state; // Captura a resposta lógica
+                    ctx.fillStyle = "#f8fafc";
+                    ctx.fillRect(x+5, y+5, cellSize-10, cellSize-10);
+                }
+            }
+        }
+
+        // 2. Gerar Opções
+        let options = [{ ...correctState, isCorrect: true }];
+        for (let i = 0; i < 5; i++) {
+            let distractor = { ...correctState, isCorrect: false };
+            const mods = ['rot', 'fill', 'scale', 'shape'];
+            const mod = mods[Math.floor(Math.random() * mods.length)];
+            if(mod === 'rot') distractor.rot += 45;
+            if(mod === 'fill') distractor.filled = !distractor.filled;
+            if(mod === 'scale') distractor.scale = 0.2;
+            if(mod === 'shape') distractor.shape = 'circle';
+            options.push(distractor);
+        }
+
+        // Embaralhar
+        options.sort(() => Math.random() - 0.5);
+        const correctIndex = options.findIndex(o => o.isCorrect) + 1;
+
+        // 3. Desenhar Opções
+        const optW = W / 3;
+        const optH = 250 / 2;
+        options.forEach((opt, i) => {
+            const x = (i % 3) * optW;
+            const y = matrixAreaSize + (Math.floor(i / 3) * optH);
+            ctx.strokeStyle = "#ddd";
+            ctx.strokeRect(x+5, y+5, optW-10, optH-10);
+            ctx.fillStyle = "#999";
+            ctx.font = "12px Arial";
+            ctx.fillText(i + 1, x + 15, y + 25);
+            drawElement(x, y, Math.min(optW, optH), opt);
+        });
+
+        // Guardar dados para exportação
+        lastGeneratedData = {
+            id: `${currentID.letter}${currentID.num}`,
+            correct_option: correctIndex,
+            grid: `${grid}x${grid}`,
+            timestamp: new Date().toISOString()
+        };
+
+        document.getElementById('correctLabel').innerText = `CORRETA: ${correctIndex}`;
+        
+        // Incrementar ID para o próximo
+        currentID.num++;
+        if (currentID.num > 12) {
+            currentID.num = 1;
+            currentID.letter = String.fromCharCode(currentID.letter.charCodeAt(0) + 1);
+        }
+        document.getElementById('idDisplay').innerText = `ID: ${currentID.letter}${currentID.num}`;
+    }
+
+    function saveImage() {
+        const id = lastGeneratedData.id;
+        const link = document.createElement('a');
+        link.download = `Raven_${id}.png`;
+        link.href = canvas.toDataURL('image/png', 1.0);
+        link.click();
+        
+        // Adicionar ao log e metadados
+        sessionMetadata.push(lastGeneratedData);
+        const log = document.getElementById('logPanel');
+        log.innerHTML += `> Salvo: ${id} (Correta: ${lastGeneratedData.correct_option})<br>`;
+        log.scrollTop = log.scrollHeight;
+    }
+
+    function downloadJSON() {
+        if (sessionMetadata.length === 0) {
+            alert("Salve pelo menos uma imagem primeiro!");
+            return;
+        }
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(sessionMetadata, null, 2));
+        const downloadAnchorNode = document.createElement('a');
+        downloadAnchorNode.setAttribute("href", dataStr);
+        downloadAnchorNode.setAttribute("download", "matriz_metadata.json");
+        document.body.appendChild(downloadAnchorNode);
+        downloadAnchorNode.click();
+        downloadAnchorNode.remove();
+    }
+
+    setupCanvas();
+    generateNew();
+</script>
+
+</body>
+</html>
