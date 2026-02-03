@@ -3,18 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Treino de Matrizes v2</title>
+    <title>Treino de Matrizes - com Ranking</title>
     <style>
         :root {
             --primary: #3498db;
             --success: #2ecc71;
             --danger: #e74c3c;
             --dark: #2c3e50;
+            --light: #f8f9fa;
         }
 
         body {
-            font-family: 'Segoe UI', sans-serif;
-            background-color: #f0f4f8;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #eef2f7;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -24,55 +25,98 @@
 
         .container {
             background: white;
-            padding: 30px;
+            padding: 25px;
             border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
             text-align: center;
             width: 90%;
             max-width: 600px;
         }
 
-        /* Painel de Status */
+        /* Status Bar */
         .status-bar {
             display: flex;
             justify-content: space-around;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             padding: 10px;
-            background: #f8f9fa;
-            border-radius: 10px;
-            font-weight: bold;
+            background: var(--light);
+            border-radius: 12px;
+            font-size: 0.9rem;
         }
-
-        .status-item { font-size: 0.9rem; color: var(--dark); }
-        .val { color: var(--primary); font-size: 1.1rem; }
+        .val { color: var(--primary); font-weight: bold; }
 
         .matrix-img {
             max-width: 100%;
             height: auto;
-            border: 3px solid #eee;
-            border-radius: 12px;
-            margin-bottom: 20px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            margin-bottom: 15px;
         }
 
         .options-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 15px;
+            gap: 12px;
         }
 
         .btn {
             background-color: var(--primary);
             color: white;
             border: none;
-            padding: 20px;
-            font-size: 1.5rem;
-            border-radius: 12px;
+            padding: 15px;
+            font-size: 1.2rem;
+            border-radius: 10px;
             cursor: pointer;
             transition: 0.2s;
         }
 
         .btn:hover { filter: brightness(1.1); }
         .btn:active { transform: scale(0.95); }
+
+        .btn-secondary { background-color: #95a5a6; margin-top: 10px; width: 100%; }
+
+        /* Input de Nome */
+        input[type="text"] {
+            width: 80%;
+            padding: 12px;
+            margin: 15px 0;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            text-align: center;
+        }
+
+        /* Lista de usuários existentes */
+        .user-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 15px;
+        }
+        .btn-user {
+            background: #ecf0f1;
+            color: var(--dark);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            border: 1px solid #bdc3c7;
+            cursor: pointer;
+        }
+
+        /* Ranking Table */
+        .ranking-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 0.9rem;
+        }
+        .ranking-table th, .ranking-table td {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            text-align: left;
+        }
+        .ranking-table th { background: #f8f9fa; color: #7f8c8d; }
 
         .correct { background-color: var(--success) !important; }
         .wrong { background-color: var(--danger) !important; animation: shake 0.3s; }
@@ -84,45 +128,36 @@
         }
 
         .hidden { display: none; }
-
-        #start-screen img { width: 100px; margin-bottom: 20px; }
-        
-        .summary-card {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 15px;
-            margin: 20px 0;
-            text-align: left;
-        }
-
-        .share-btn {
-            background-color: #27ae60;
-            margin-top: 10px;
-            width: 100%;
-        }
-
         #message { height: 25px; margin-top: 10px; font-weight: bold; }
     </style>
 </head>
 <body>
 
-<!-- TELA INICIAL -->
-<div id="start-screen" class="container">
-    <h1>Treino de Matrizes</h1>
-    <p>Desafie sua percepção visual!</p>
-    <p>Responda as 36 questões o mais rápido que puder.</p>
-    <button class="btn" style="width: 100%;" onclick="startGame()">INICIAR TREINO</button>
+<!-- TELA DE IDENTIFICAÇÃO -->
+<div id="login-screen" class="container">
+    <h1>Quem vai jogar?</h1>
+    <input type="text" id="user-name" placeholder="Digite seu nome..." maxlength="15">
+    
+    <div id="existing-users-container" class="hidden">
+        <p style="font-size: 0.8rem; color: #7f8c8d;">Ou escolha um perfil existente:</p>
+        <div id="user-list" class="user-list"></div>
+    </div>
+
+    <button class="btn" style="width: 80%; margin-top: 20px;" onclick="validateAndStart()">COMEÇAR</button>
 </div>
 
 <!-- TELA DO JOGO -->
 <div id="game-screen" class="container hidden">
     <div class="status-bar">
-        <div class="status-item">Acertos: <span id="hits-count" class="val">0</span></div>
-        <div class="status-item">Erros: <span id="misses-count" class="val">0</span></div>
-        <div class="status-item">Tempo: <span id="timer" class="val">00:00</span></div>
+        <div>Jogador: <span id="display-player" class="val">-</span></div>
+        <div>Tempo: <span id="timer" class="val">00:00</span></div>
+    </div>
+    <div class="status-bar">
+        <div>Acertos: <span id="hits-count" class="val">0</span></div>
+        <div>Erros: <span id="misses-count" class="val">0</span></div>
     </div>
 
-    <div id="progress">Questão 1 de 36</div>
+    <div id="progress" style="margin-bottom: 10px;">Questão 1 de 36</div>
     <img id="main-image" src="" alt="Questão" class="matrix-img">
 
     <div class="options-grid">
@@ -136,29 +171,42 @@
     <div id="message"></div>
 </div>
 
-<!-- TELA FINAL -->
+<!-- TELA DE RESULTADO E RANKING -->
 <div id="finish-screen" class="container hidden">
-    <h1>🎉 Concluído!</h1>
-    <div class="summary-card">
-        <p>⏱ <b>Tempo Total:</b> <span id="final-time"></span></p>
-        <p>✅ <b>Acertos:</b> <span id="final-hits"></span></p>
-        <p>❌ <b>Erros:</b> <span id="final-misses"></span></p>
-        <p>🎯 <b>Precisão:</b> <span id="final-accuracy"></span>%</p>
+    <h1>Mandou bem, <span id="winner-name"></span>!</h1>
+    
+    <div style="background: var(--light); padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+        <p>Seu tempo: <b id="final-time"></b> | Precisão: <b id="final-acc"></b>%</p>
     </div>
-    <button class="btn share-btn" onclick="shareResult()">Partilhar Resultado 🔗</button>
-    <button class="btn" style="width: 100%; margin-top: 10px; background: #95a5a6;" onclick="location.reload()">Refazer</button>
+
+    <h3>🏆 Ranking da Sessão</h3>
+    <table class="ranking-table">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Nome</th>
+                <th>Acertos</th>
+                <th>Tempo</th>
+            </tr>
+        </thead>
+        <tbody id="ranking-body"></tbody>
+    </table>
+
+    <button class="btn" style="width: 100%;" onclick="resetToLogin()">TENTAR NOVAMENTE</button>
+    <button class="btn btn-secondary" onclick="shareResult()">Compartilhar Resultado</button>
 </div>
 
 <script>
+    let currentPlayer = "";
     let currentQ = 1;
     let hits = 0;
     let misses = 0;
     let startTime;
     let timerInterval;
     let answers = {};
+    let sessionRanking = []; // Memória do ranking
     const totalQ = 36;
 
-    // Carregar respostas do arquivo TXT
     async function loadData() {
         try {
             const resp = await fetch('respostas.txt');
@@ -167,12 +215,35 @@
                 const p = line.split(';');
                 if(p.length >= 2) answers[p[0].trim()] = p[1].trim();
             });
-        } catch (e) { alert("Erro ao carregar arquivo de respostas."); }
+        } catch (e) { console.error("Erro ao carregar TXT"); }
+    }
+
+    function validateAndStart() {
+        const nameInput = document.getElementById('user-name').value.trim();
+        if (!nameInput) return alert("Por favor, digite um nome!");
+        
+        currentPlayer = nameInput;
+        startGame();
+    }
+
+    function selectUser(name) {
+        currentPlayer = name;
+        startGame();
     }
 
     function startGame() {
-        document.getElementById('start-screen').classList.add('hidden');
+        document.getElementById('login-screen').classList.add('hidden');
+        document.getElementById('finish-screen').classList.add('hidden');
         document.getElementById('game-screen').classList.remove('hidden');
+        
+        // Reset de variáveis de jogo
+        currentQ = 1;
+        hits = 0;
+        misses = 0;
+        document.getElementById('hits-count').innerText = "0";
+        document.getElementById('misses-count').innerText = "0";
+        document.getElementById('display-player').innerText = currentPlayer;
+        
         startTime = Date.now();
         timerInterval = setInterval(updateTimer, 1000);
         updateUI();
@@ -202,47 +273,91 @@
             hits++;
             document.getElementById('hits-count').innerText = hits;
             btn.classList.add('correct');
-            document.getElementById('message').innerText = "Muito bem! ✨";
-            document.getElementById('message').style.color = "var(--success)";
-            
-            setTimeout(() => {
-                currentQ++;
-                updateUI();
-            }, 800);
+            setTimeout(() => { currentQ++; updateUI(); }, 600);
         } else {
             misses++;
             document.getElementById('misses-count').innerText = misses;
             btn.classList.add('wrong');
-            document.getElementById('message').innerText = "Tente de novo! 🧐";
-            document.getElementById('message').style.color = "var(--danger)";
-            setTimeout(() => btn.classList.remove('wrong'), 500);
+            setTimeout(() => btn.classList.remove('wrong'), 400);
         }
     }
 
     function finish() {
         clearInterval(timerInterval);
-        document.getElementById('game-screen').classList.add('hidden');
-        document.getElementById('finish-screen').classList.remove('hidden');
-
-        const timeStr = document.getElementById('timer').innerText;
+        const finalTime = document.getElementById('timer').innerText;
+        const totalSeconds = Math.floor((Date.now() - startTime) / 1000);
         const accuracy = Math.round((hits / (hits + misses)) * 100) || 0;
 
-        document.getElementById('final-time').innerText = timeStr;
-        document.getElementById('final-hits').innerText = hits;
-        document.getElementById('final-misses').innerText = misses;
-        document.getElementById('final-accuracy').innerText = accuracy;
+        // Salvar no ranking
+        sessionRanking.push({
+            name: currentPlayer,
+            hits: hits,
+            misses: misses,
+            timeStr: finalTime,
+            seconds: totalSeconds
+        });
+
+        // Ordenar ranking: Mais acertos primeiro, se empatar, menor tempo
+        sessionRanking.sort((a, b) => b.hits - a.hits || a.seconds - b.seconds);
+
+        showRankingPage(finalTime, accuracy);
+    }
+
+    function showRankingPage(time, acc) {
+        document.getElementById('game-screen').classList.add('hidden');
+        document.getElementById('finish-screen').classList.remove('hidden');
+        
+        document.getElementById('winner-name').innerText = currentPlayer;
+        document.getElementById('final-time').innerText = time;
+        document.getElementById('final-acc').innerText = acc;
+
+        const tbody = document.getElementById('ranking-body');
+        tbody.innerHTML = "";
+        
+        sessionRanking.forEach((item, index) => {
+            const row = `<tr>
+                <td>${index + 1}º</td>
+                <td>${item.name}</td>
+                <td>${item.hits}</td>
+                <td>${item.timeStr}</td>
+            </tr>`;
+            tbody.innerHTML += row;
+        });
+    }
+
+    function resetToLogin() {
+        document.getElementById('finish-screen').classList.add('hidden');
+        document.getElementById('login-screen').classList.remove('hidden');
+        document.getElementById('user-name').value = "";
+
+        // Atualizar botões de usuários existentes
+        const userContainer = document.getElementById('existing-users-container');
+        const userListDiv = document.getElementById('user-list');
+        
+        // Pega nomes únicos que já jogaram
+        const uniqueNames = [...new Set(sessionRanking.map(r => r.name))];
+        
+        if (uniqueNames.length > 0) {
+            userContainer.classList.remove('hidden');
+            userListDiv.innerHTML = "";
+            uniqueNames.forEach(name => {
+                const btn = document.createElement('button');
+                btn.className = 'btn-user';
+                btn.innerText = name;
+                btn.onclick = () => selectUser(name);
+                userListDiv.appendChild(btn);
+            });
+        }
     }
 
     function shareResult() {
         const time = document.getElementById('final-time').innerText;
-        const acc = document.getElementById('final-accuracy').innerText;
-        const text = `Completei o treino de Matrizes de Raven em ${time} com ${acc}% de precisão! Tente você também: ${window.location.href}`;
-
+        const text = `${currentPlayer} completou o treino de Matrizes em ${time}! Tente superar esse tempo aqui: ${window.location.href}`;
         if (navigator.share) {
-            navigator.share({ title: 'Meu Desempenho', text: text, url: window.location.href });
+            navigator.share({ title: 'Resultado Matrizes', text: text, url: window.location.href });
         } else {
             navigator.clipboard.writeText(text);
-            alert("Resultado copiado para a área de transferência!");
+            alert("Resultado copiado!");
         }
     }
 
